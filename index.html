@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GDBOT - Trình quản lý Macro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #07070d;
+            color: #fff;
+            min-height: 100vh;
+            padding: 40px 20px;
+            background-image:
+                radial-gradient(ellipse at 20% 30%, rgba(245, 166, 35, 0.07) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 70%, rgba(255, 140, 0, 0.05) 0%, transparent 60%);
+        }
+        .container { max-width: 1000px; width: 100%; margin: 0 auto; }
+
+        /* ===== PAGE LOADER ===== */
+        .page-loader {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #07070d;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+        .page-loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        .page-loader .logo-container { width: 72px; height: 72px; margin-bottom: 14px; position: relative; }
+        .page-loader .logo-container img { width: 100%; height: 100%; object-fit: contain; border-radius: 12px; filter: drop-shadow(0 0 30px rgba(245, 166, 35, 0.06)); }
+        .page-loader .spinner {
+            width: 28px; height: 28px;
+            border: 2px solid rgba(245, 166, 35, 0.06);
+            border-top-color: #F5A623;
+            border-radius: 50%;
+            animation: spin 0.8s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
+            position: relative;
+        }
+        .page-loader .spinner::after {
+            content: '';
+            position: absolute;
+            top: -4px; left: -4px; right: -4px; bottom: -4px;
+            border: 1.5px solid transparent;
+            border-top-color: rgba(245, 166, 35, 0.1);
+            border-radius: 50%;
+            animation: spin 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite reverse;
+        }
+        .page-loader .loader-text { margin-top: 14px; font-size: 0.75rem; color: #444; font-weight: 400; letter-spacing: 0.1em; animation: pulseText 1.6s ease-in-out infinite; }
+        .page-loader .loader-text span { color: #F5A623; }
+        .page-loader .loader-progress { margin-top: 10px; width: 120px; height: 2px; background: rgba(255, 255, 255, 0.04); border-radius: 4px; overflow: hidden; }
+        .page-loader .loader-progress .bar { height: 100%; width: 0%; background: linear-gradient(90deg, #F5A623, #FF8C00); border-radius: 4px; animation: progressBarFast 1.2s ease-in-out forwards; }
+        @keyframes progressBarFast { 0% { width: 0%; } 70% { width: 85%; } 100% { width: 100%; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulseText { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+        /* ===== HEADER ===== */
+        .header { text-align: center; margin-bottom: 36px; position: relative; }
+        .header .glow { position: absolute; top: -60px; left: 50%; transform: translateX(-50%); width: 400px; height: 400px; background: radial-gradient(ellipse, rgba(245, 166, 35, 0.08), transparent 70%); border-radius: 50%; pointer-events: none; filter: blur(60px); }
+        .header .logo { display: inline-flex; align-items: center; gap: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); padding: 6px 20px 6px 16px; border-radius: 100px; margin-bottom: 14px; position: relative; animation: fadeUp 0.8s ease forwards; }
+        .header .logo .icon { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; }
+        .header .logo .version { font-size: 0.65rem; font-weight: 600; color: #F5A623; background: rgba(245, 166, 35, 0.12); padding: 2px 10px; border-radius: 100px; border: 1px solid rgba(245, 166, 35, 0.08); }
+        .header h1 { font-size: 3.5rem; font-weight: 900; letter-spacing: -0.04em; background: linear-gradient(135deg, #F5A623 0%, #FF8C00 40%, #F5A623 70%, #FFB347 100%); background-size: 300% 300%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: shimmerText 6s ease-in-out infinite, fadeUp 0.8s ease forwards; line-height: 1.1; }
+        @keyframes shimmerText { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .header .sub { color: #555; font-size: 1rem; font-weight: 400; margin-top: 4px; animation: fadeUp 0.8s ease 0.1s forwards; opacity: 0; }
+        .header .sub span { color: #F5A623; }
+
+        /* ===== DOWNLOAD MOD BUTTON ===== */
+        .download-mod-section { display: flex; justify-content: center; margin-bottom: 28px; animation: fadeUp 0.8s ease 0.2s forwards; opacity: 0; }
+        .download-mod-btn {
+            display: inline-flex; align-items: center; gap: 14px;
+            background: linear-gradient(135deg, #F5A623, #E8951A);
+            color: #07070d; padding: 12px 32px; border-radius: 14px;
+            font-weight: 700; font-size: 0.95rem;
+            text-decoration: none; transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+            box-shadow: 0 8px 32px rgba(245, 166, 35, 0.12);
+            border: none; cursor: pointer;
+            position: relative; overflow: hidden;
+            width: 100%; max-width: 460px; justify-content: center;
+        }
+        .download-mod-btn::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.15) 60%, transparent 80%);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+        .download-mod-btn:hover::after { transform: translateX(100%); }
+        .download-mod-btn:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 12px 48px rgba(245, 166, 35, 0.2); }
+        .download-mod-btn:active { transform: scale(0.98); }
+        .download-mod-btn .icon { font-size: 1.3rem; }
+        .download-mod-btn .info { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.3; }
+        .download-mod-btn .info .label { font-size: 0.65rem; font-weight: 500; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.06em; }
+        .download-mod-btn .info .filename { font-size: 0.95rem; font-weight: 700; }
+        .download-mod-btn .size-tag { font-size: 0.65rem; font-weight: 500; opacity: 0.6; background: rgba(0, 0, 0, 0.1); padding: 2px 10px; border-radius: 100px; }
+
+        /* ===== TOOLBAR ===== */
+        .toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 14px; padding: 12px 20px; animation: fadeUp 0.8s ease 0.3s forwards; opacity: 0; flex-shrink: 0; }
+        .toolbar-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .toolbar-left .search-box { display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 5px 12px; transition: all 0.3s ease; }
+        .toolbar-left .search-box:focus-within { border-color: rgba(245, 166, 35, 0.25); background: rgba(255, 255, 255, 0.06); }
+        .toolbar-left .search-box input { background: none; border: none; color: #ccc; font-family: inherit; font-size: 0.8rem; padding: 5px 0; outline: none; width: 160px; }
+        .toolbar-left .search-box input::placeholder { color: #444; }
+        .toolbar-left .search-box .search-icon { color: #444; font-size: 0.85rem; }
+        .toolbar-left .filter-badge { font-size: 0.65rem; color: #666; background: rgba(255, 255, 255, 0.04); padding: 3px 10px; border-radius: 100px; border: 1px solid rgba(255, 255, 255, 0.04); }
+        .toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .toolbar-btn { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.06); color: #888; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.7rem; font-weight: 500; transition: all 0.3s ease; font-family: inherit; display: flex; align-items: center; gap: 4px; }
+        .toolbar-btn:hover { background: rgba(245, 166, 35, 0.08); border-color: rgba(245, 166, 35, 0.15); color: #F5A623; }
+        .toolbar-btn .badge { background: rgba(245, 166, 35, 0.15); color: #F5A623; font-size: 0.6rem; padding: 1px 8px; border-radius: 100px; }
+
+        /* ===== STATS ===== */
+        .stats { background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(12px); border-radius: 12px; padding: 12px 20px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255, 255, 255, 0.04); flex-wrap: wrap; gap: 8px; animation: fadeUp 0.8s ease 0.35s forwards; opacity: 0; flex-shrink: 0; }
+        .stats-left { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+        .stats-item { display: flex; align-items: center; gap: 6px; color: #666; font-size: 0.8rem; }
+        .stats-item .num { color: #fff; font-weight: 600; }
+        .stats-item .num.accent { color: #F5A623; }
+
+        /* ===== FILE LIST - CÓ HỘP CUỘN RIÊNG ===== */
+        .file-list-wrapper {
+            max-height: 420px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 4px;
+            scroll-behavior: smooth;
+            animation: fadeUp 0.8s ease 0.4s forwards;
+            opacity: 0;
+        }
+
+        /* ===== TÙY CHỈNH THANH CUỘN ===== */
+        .file-list-wrapper::-webkit-scrollbar {
+            width: 6px;
+        }
+        .file-list-wrapper::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+        }
+        .file-list-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(245, 166, 35, 0.25);
+            border-radius: 10px;
+            transition: background 0.3s ease;
+        }
+        .file-list-wrapper::-webkit-scrollbar-thumb:hover {
+            background: rgba(245, 166, 35, 0.4);
+        }
+
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .file-item {
+            background: rgba(255, 255, 255, 0.015);
+            border-radius: 10px;
+            padding: 12px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+            flex-wrap: wrap;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+            animation: fadeUp 0.4s ease forwards;
+            opacity: 0;
+        }
+        .file-item:nth-child(1) { animation-delay: 0.05s; }
+        .file-item:nth-child(2) { animation-delay: 0.1s; }
+        .file-item:nth-child(3) { animation-delay: 0.15s; }
+        .file-item:nth-child(4) { animation-delay: 0.2s; }
+        .file-item:nth-child(5) { animation-delay: 0.25s; }
+        .file-item:nth-child(6) { animation-delay: 0.3s; }
+        .file-item:nth-child(7) { animation-delay: 0.35s; }
+        .file-item:nth-child(8) { animation-delay: 0.4s; }
+        .file-item:nth-child(9) { animation-delay: 0.45s; }
+        .file-item:nth-child(10) { animation-delay: 0.5s; }
+        .file-item:nth-child(11) { animation-delay: 0.55s; }
+        .file-item:nth-child(12) { animation-delay: 0.6s; }
+        .file-item:nth-child(13) { animation-delay: 0.65s; }
+        .file-item:nth-child(14) { animation-delay: 0.7s; }
+        .file-item:nth-child(15) { animation-delay: 0.75s; }
+        .file-item:hover { background: rgba(255, 255, 255, 0.04); border-color: rgba(245, 166, 35, 0.10); transform: translateX(4px); }
+        .file-item .file-name { font-size: 0.9rem; font-weight: 500; color: #e8e8e8; display: flex; align-items: center; gap: 10px; flex: 1; min-width: 120px; z-index: 1; }
+        .file-item .file-name .icon { font-size: 1.1rem; opacity: 0.5; flex-shrink: 0; }
+        .file-item .file-meta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; z-index: 1; }
+        .file-item .file-size { color: #444; font-size: 0.7rem; font-weight: 400; }
+        .file-item .download-btn { background: rgba(255, 255, 255, 0.06); color: #ccc; border: 1px solid rgba(255, 255, 255, 0.06); padding: 4px 14px; border-radius: 8px; font-weight: 500; font-size: 0.7rem; cursor: pointer; transition: all 0.25s ease; z-index: 1; font-family: inherit; opacity: 1; transform: scale(1); }
+        .file-item .download-btn:hover { background: rgba(245, 166, 35, 0.12); border-color: rgba(245, 166, 35, 0.2); color: #F5A623; }
+        .file-item .download-btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+        /* ===== EMPTY ===== */
+        .empty { text-align: center; padding: 40px 20px; }
+        .empty .icon { font-size: 3rem; margin-bottom: 10px; opacity: 0.25; }
+        .empty p { font-size: 0.95rem; color: #444; }
+        .empty .sub { font-size: 0.75rem; color: #2a2a2a; margin-top: 4px; }
+
+        /* ===== FOOTER ===== */
+        .footer { text-align: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.02); color: #1a1a1a; font-size: 0.7rem; font-weight: 400; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; animation: fadeUp 0.8s ease 0.5s forwards; opacity: 0; flex-shrink: 0; }
+        .footer span { color: #F5A623; }
+        .footer .heart { display: inline-block; animation: pulse 1.5s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+        .footer a { color: #333; text-decoration: none; transition: color 0.3s ease; }
+        .footer a:hover { color: #666; }
+
+        /* ===== NOTIFICATION ===== */
+        .notification { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: rgba(12, 12, 20, 0.92); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); color: #eee; padding: 10px 24px; border-radius: 12px; font-size: 0.8rem; z-index: 9997; box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5); animation: slideUp 0.4s cubic-bezier(0.22, 1, 0.36, 1); max-width: 90%; text-align: center; display: flex; align-items: center; gap: 10px; }
+        .notification.error { border-color: rgba(255, 60, 60, 0.12); }
+        @keyframes slideUp { from { opacity: 0; transform: translateX(-50%) translateY(20px) scale(0.96); } to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2.8rem; }
+            .toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
+            .toolbar-left .search-box input { width: 100%; }
+            .toolbar-right { justify-content: space-between; }
+            .download-mod-btn { padding: 12px 20px; font-size: 0.9rem; max-width: 100%; }
+            .file-list-wrapper { max-height: 320px; }
+        }
+        @media (max-width: 640px) {
+            body { padding: 16px 12px; }
+            .header h1 { font-size: 2rem; }
+            .header .sub { font-size: 0.85rem; }
+            .stats { flex-direction: column; align-items: stretch; gap: 6px; padding: 10px 14px; }
+            .stats-left { justify-content: space-between; }
+            .stats-item { font-size: 0.7rem; }
+            .file-item { padding: 10px 12px; }
+            .file-item .file-name { font-size: 0.8rem; gap: 6px; min-width: 80px; }
+            .file-item .download-btn { width: 100%; text-align: center; padding: 5px; font-size: 0.65rem; }
+            .file-item .file-meta { width: 100%; justify-content: space-between; }
+            .file-item:hover { transform: none; }
+            .download-mod-btn { padding: 10px 16px; font-size: 0.8rem; border-radius: 12px; gap: 10px; }
+            .download-mod-btn .icon { font-size: 1.1rem; }
+            .download-mod-btn .info .filename { font-size: 0.8rem; }
+            .notification { font-size: 0.75rem; padding: 8px 14px; bottom: 12px; width: calc(100% - 24px); }
+            .footer { flex-direction: column; gap: 4px; font-size: 0.65rem; }
+            .toolbar-left .search-box input { width: 100%; }
+            .toolbar-btn { font-size: 0.65rem; padding: 5px 10px; }
+            .page-loader .logo-container { width: 50px; height: 50px; }
+            .page-loader .loader-text { font-size: 0.65rem; }
+            .page-loader .loader-progress { width: 100px; }
+            .file-list-wrapper { max-height: 250px; }
+        }
+        @media (max-width: 400px) {
+            .header h1 { font-size: 1.6rem; }
+            .stats-left { flex-direction: column; align-items: flex-start; gap: 2px; }
+            .file-list-wrapper { max-height: 200px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== PAGE LOADER ===== -->
+    <div class="page-loader" id="pageLoader">
+        <div class="logo-container"><img src="GD.png" alt="GD Logo" /></div>
+        <div class="spinner"></div>
+        <div class="loader-text">Đang tải <span>GDBOT</span></div>
+        <div class="loader-progress"><div class="bar"></div></div>
+    </div>
+
+    <!-- ===== CONTAINER CHÍNH ===== -->
+    <div class="container">
+
+        <!-- ===== HEADER ===== -->
+        <header class="header">
+            <div class="glow"></div>
+            <div class="logo">
+                <img src="GD.png" alt="GD" class="icon" id="headerLogo" />
+                <span>GDBOT</span>
+                <span class="version">v2.5.0</span>
+            </div>
+            <h1>Kho Macro</h1>
+            <p class="sub">Quản lý và tải macro cho <span>Geometry Dash</span></p>
+        </header>
+
+        <!-- ===== DOWNLOAD MOD BUTTON ===== -->
+        <div class="download-mod-section">
+            <button class="download-mod-btn" onclick="downloadMod()" id="downloadModBtn">
+                <span class="icon">📦</span>
+                <span class="info">
+                    <span class="label">Tải xuống</span>
+                    <span class="filename">GDBOT Mod</span>
+                </span>
+                <span class="size-tag">~2.6 MB</span>
+            </button>
+        </div>
+
+        <!-- ===== TOOLBAR ===== -->
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" placeholder="Tìm macro..." oninput="filterMacros()" />
+                </div>
+                <span class="filter-badge" id="filterBadge">Tất cả</span>
+            </div>
+            <div class="toolbar-right">
+                <button class="toolbar-btn" onclick="sortMacros()">↕ Sắp xếp <span class="badge" id="sortBadge">Tên</span></button>
+                <button class="toolbar-btn" onclick="loadFileList()">⟳ Làm mới</button>
+            </div>
+        </div>
+
+        <!-- ===== STATS ===== -->
+        <div class="stats" id="stats">
+            <div class="stats-left">
+                <div class="stats-item">📄 Tổng số: <span class="num accent" id="fileCount">0</span></div>
+                <div class="stats-item">💾 Dung lượng: <span class="num" id="totalSize">0 KB</span></div>
+            </div>
+        </div>
+
+        <!-- ===== FILE LIST - CÓ HỘP CUỘN ===== -->
+        <div class="file-list-wrapper" id="fileListWrapper">
+            <div class="file-list" id="fileList"></div>
+        </div>
+
+        <!-- ===== FOOTER ===== -->
+        <footer class="footer">
+            <span>Made with <span class="heart">❤</span> by <span>khanhk8</span></span>
+            <span>|</span>
+            <span>GDBOT v2.5.0</span>
+            <span>|</span>
+            <a href="https://github.com/HoangQuocKhanh0504/GDBOT" target="_blank">GitHub</a>
+        </footer>
+
+    </div>
+
+    <script>
+        // ============================================================
+        // CẤU HÌNH
+        // ============================================================
+        const REPO_OWNER = 'HoangQuocKhanh0504';
+        const REPO_NAME = 'GDBOT';
+        const BRANCH = 'root';
+        const MACROS_PATH = 'macros';
+        const MOD_URL = 'https://raw.githubusercontent.com/HoangQuocKhanh0504/GDBOT/root/GDBOT.geode';
+
+        let macroData = [];
+        let sortMode = 'name';
+        let sortAsc = true;
+        let isLoading = false;
+        let isDownloading = false;
+        let popupInterval = null;
+        let popupTimer = null;
+        let popupController = null;
+        // ============================================================
+
+        // ===== DOM REFS =====
+        const dom = {};
+
+        function initDomRefs() {
+            dom.downloadModBtn = document.getElementById('downloadModBtn');
+            dom.fileList = document.getElementById('fileList');
+            dom.fileListWrapper = document.getElementById('fileListWrapper');
+            dom.fileCount = document.getElementById('fileCount');
+            dom.totalSize = document.getElementById('totalSize');
+            dom.searchInput = document.getElementById('searchInput');
+            dom.filterBadge = document.getElementById('filterBadge');
+            dom.sortBadge = document.getElementById('sortBadge');
+        }
+
+        // ===== UTILITY =====
+        function formatSize(bytes) {
+            if (!bytes || bytes === 0) return '0 KB';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = { 'gdr': '📄', 'xd': '📄', 'json': '📋', 'txt': '📝' };
+            return icons[ext] || '📄';
+        }
+
+        function getDisplayName(filename) {
+            const dotIndex = filename.lastIndexOf('.');
+            if (dotIndex > 0) return filename.substring(0, dotIndex);
+            return filename;
+        }
+
+        function getExtension(filename) {
+            const dotIndex = filename.lastIndexOf('.');
+            if (dotIndex > 0) return filename.substring(dotIndex + 1);
+            return '';
+        }
+
+        function showNotification(message, type = 'success') {
+            const old = document.querySelector('.notification');
+            if (old) old.remove();
+            const notif = document.createElement('div');
+            notif.className = 'notification' + (type === 'error' ? ' error' : '');
+            notif.innerHTML = `<span>${type === 'error' ? '❌' : '✅'}</span>${message}`;
+            document.body.appendChild(notif);
+            setTimeout(() => {
+                notif.style.opacity = '0';
+                notif.style.transform = 'translateX(-50%) translateY(20px) scale(0.96)';
+                notif.style.transition = 'all 0.3s ease';
+                setTimeout(() => notif.remove(), 400);
+            }, 3000);
+        }
+
+        // ============================================================
+        // POPUP - TẠO MỚI MỖI LẦN
+        // ============================================================
+        function createPopup(fileName, fileSize) {
+            const oldPopup = document.getElementById('downloadPopupContainer');
+            if (oldPopup) oldPopup.remove();
+
+            if (popupInterval) { clearInterval(popupInterval);
+                popupInterval = null; }
+            if (popupTimer) { clearTimeout(popupTimer);
+                popupTimer = null; }
+            if (popupController) { try { popupController.abort(); } catch (e) {} }
+            popupController = null;
+            isDownloading = false;
+
+            document.querySelectorAll('.download-btn, #downloadModBtn').forEach(btn => {
+                if (btn) btn.disabled = false;
+            });
+
+            const displayName = fileName || 'file';
+            const displaySize = fileSize || 'Đang tính...';
+
+            const overlay = document.createElement('div');
+            overlay.id = 'downloadPopupContainer';
+            overlay.className = 'download-popup-overlay active';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(7, 7, 13, 0.82);
+                backdrop-filter: blur(16px);
+                z-index: 9998;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 1;
+                visibility: visible;
+                transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+            `;
+
+            overlay.innerHTML = `
+                <div class="download-popup" style="
+                    background: rgba(18, 18, 30, 0.95);
+                    border: 1px solid rgba(255, 255, 255, 0.06);
+                    border-radius: 28px;
+                    padding: 40px 48px 38px;
+                    max-width: 420px;
+                    width: 90%;
+                    text-align: center;
+                    transform: scale(1) translateY(0);
+                    transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+                    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6);
+                    position: relative;
+                    overflow: hidden;
+                ">
+                    <div style="
+                        position: absolute;
+                        top: -80px; left: 50%;
+                        transform: translateX(-50%);
+                        width: 300px; height: 300px;
+                        background: radial-gradient(ellipse, rgba(245, 166, 35, 0.06), transparent 70%);
+                        border-radius: 50%;
+                        pointer-events: none;
+                        filter: blur(50px);
+                    "></div>
+
+                    <div style="width: 56px; height: 56px; margin: 0 auto 12px; position: relative;">
+                        <img src="GD.png" alt="GD Logo" style="width:100%;height:100%;object-fit:contain;border-radius:12px;" />
+                    </div>
+
+                    <div id="popupSpinner" style="
+                        width: 40px; height: 40px;
+                        margin: 0 auto 14px;
+                        border: 3px solid rgba(245, 166, 35, 0.06);
+                        border-top-color: #F5A623;
+                        border-radius: 50%;
+                        animation: spin 0.8s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
+                        position: relative;
+                    ">
+                        <div style="
+                            content: '';
+                            position: absolute;
+                            top: -5px; left: -5px; right: -5px; bottom: -5px;
+                            border: 2px solid transparent;
+                            border-top-color: rgba(245, 166, 35, 0.1);
+                            border-radius: 50%;
+                            animation: spin 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite reverse;
+                        "></div>
+                    </div>
+
+                    <div id="popupTitle" style="font-size: 1.2rem; font-weight: 700; color: #fff; margin-bottom: 2px; position: relative;">
+                        Đang tải <span style="color: #F5A623;">${displayName}</span>
+                    </div>
+
+                    <div id="popupSub" style="font-size: 0.8rem; color: #555; margin-bottom: 14px; min-height: 20px; position: relative;">
+                        Vui lòng đợi trong giây lát...
+                    </div>
+
+                    <div style="width: 100%; height: 4px; background: rgba(255, 255, 255, 0.04); border-radius: 4px; overflow: hidden; margin-bottom: 10px; position: relative;">
+                        <div id="popupProgressBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #F5A623, #FF8C00); border-radius: 4px; transition: width 0.3s ease; position: relative;">
+                            <div style="position: absolute; right: 0; top: 0; bottom: 0; width: 20px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15)); border-radius: 4px; filter: blur(4px);"></div>
+                        </div>
+                    </div>
+
+                    <div id="popupPercent" style="font-size: 0.9rem; color: #444; font-weight: 600; font-variant-numeric: tabular-nums; position: relative;">
+                        <span id="popupPercentNum" style="color: #F5A623; font-size: 1.1rem;">0</span>%
+                    </div>
+
+                    <div id="popupStatus" style="font-size: 0.7rem; color: #333; margin-top: 8px; letter-spacing: 0.04em; min-height: 18px; position: relative;">
+                        <span class="dot" style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #F5A623; margin-right: 6px; animation: dotPulse 1.2s ease-in-out infinite;"></span>
+                        Đang kết nối...
+                    </div>
+
+                    <div id="popupFileInfo" style="
+                        margin: 8px 0 12px;
+                        padding: 8px 16px;
+                        background: rgba(255, 255, 255, 0.03);
+                        border-radius: 8px;
+                        border: 1px solid rgba(255, 255, 255, 0.04);
+                        font-size: 0.7rem;
+                        color: #444;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        flex-wrap: wrap;
+                        gap: 4px;
+                        position: relative;
+                    ">
+                        <span style="color: #555;">Tên file:</span>
+                        <span id="popupFileNameDisplay" style="color: #aaa; font-weight: 500;">${displayName}</span>
+                        <span style="color: #555;">Kích thước:</span>
+                        <span id="popupFileSizeDisplay" style="color: #aaa; font-weight: 500;">${displaySize}</span>
+                    </div>
+
+                    <button id="popupCancel" onclick="cancelDownload()" style="
+                        margin-top: 14px;
+                        background: none;
+                        border: 1px solid rgba(255, 255, 255, 0.06);
+                        color: #555;
+                        padding: 6px 22px;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-family: inherit;
+                        font-size: 0.7rem;
+                        transition: all 0.3s ease;
+                        position: relative;
+                    ">
+                        Hủy tải
+                    </button>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            return {
+                overlay: overlay,
+                spinner: document.getElementById('popupSpinner'),
+                title: document.getElementById('popupTitle'),
+                sub: document.getElementById('popupSub'),
+                progressBar: document.getElementById('popupProgressBar'),
+                percentNum: document.getElementById('popupPercentNum'),
+                status: document.getElementById('popupStatus'),
+                cancel: document.getElementById('popupCancel'),
+                fileNameDisplay: document.getElementById('popupFileNameDisplay'),
+                fileSizeDisplay: document.getElementById('popupFileSizeDisplay')
+            };
+        }
+
+        function closePopup() {
+            const popup = document.getElementById('downloadPopupContainer');
+            if (popup) {
+                popup.style.opacity = '0';
+                popup.style.visibility = 'hidden';
+                setTimeout(() => {
+                    if (popup.parentNode) popup.remove();
+                }, 500);
+            }
+            if (popupInterval) { clearInterval(popupInterval);
+                popupInterval = null; }
+            if (popupTimer) { clearTimeout(popupTimer);
+                popupTimer = null; }
+            if (popupController) { try { popupController.abort(); } catch (e) {} }
+            popupController = null;
+            isDownloading = false;
+
+            document.querySelectorAll('.download-btn, #downloadModBtn').forEach(btn => {
+                if (btn) btn.disabled = false;
+            });
+        }
+
+        // ============================================================
+        // DOWNLOAD FUNCTIONS
+        // ============================================================
+        function startProgressSimulation(popup) {
+            let progress = 0;
+            let statusIndex = 0;
+            const msgs = ['Đang kết nối...', 'Đang phân tích file...', 'Đang tải dữ liệu...', 'Sắp hoàn thành...'];
+
+            if (popupInterval) clearInterval(popupInterval);
+
+            popupInterval = setInterval(() => {
+                progress = Math.min(progress + 1.2, 99);
+                if (popup.progressBar) popup.progressBar.style.width = progress + '%';
+                if (popup.percentNum) popup.percentNum.textContent = Math.floor(progress);
+
+                const newIdx = Math.min(Math.floor(progress / 25), 3);
+                if (newIdx !== statusIndex && popup.status) {
+                    statusIndex = newIdx;
+                    popup.status.innerHTML = `<span class="dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#F5A623;margin-right:6px;animation:dotPulse 1.2s ease-in-out infinite;"></span>${msgs[statusIndex]}`;
+                }
+
+                if (progress >= 99) {
+                    clearInterval(popupInterval);
+                    popupInterval = null;
+                }
+            }, 80);
+        }
+
+        function updateProgress(popup, progress) {
+            const p = Math.min(progress, 99);
+            if (popup.progressBar) popup.progressBar.style.width = p + '%';
+            if (popup.percentNum) popup.percentNum.textContent = Math.floor(p);
+        }
+
+        function finishDownload(success = true, popup, fileName, fileSize) {
+            if (popupInterval) { clearInterval(popupInterval);
+                popupInterval = null; }
+            if (popupTimer) { clearTimeout(popupTimer);
+                popupTimer = null; }
+
+            const displayName = fileName || popup?.fileNameDisplay?.textContent || 'file';
+            const displaySize = fileSize || popup?.fileSizeDisplay?.textContent || '';
+
+            if (popup.spinner) popup.spinner.style.display = 'none';
+            if (popup.progressBar) popup.progressBar.style.width = '100%';
+            if (popup.percentNum) popup.percentNum.textContent = '100';
+            if (popup.cancel) popup.cancel.style.display = 'none';
+
+            if (popup.title) {
+                popup.title.innerHTML = success ?
+                    `✅ Đã tải xong <span style="color: #22c55e;">${displayName}</span>` :
+                    `❌ Lỗi tải <span style="color: #ef4444;">${displayName}</span>`;
+            }
+            if (popup.sub) {
+                popup.sub.textContent = success ? 'Tải xuống thành công!' : 'Có lỗi xảy ra, vui lòng thử lại.';
+            }
+            if (popup.status) {
+                popup.status.innerHTML = success ? '🎉 Hoàn tất!' : '⚠️ Lỗi!';
+            }
+            if (popup.fileNameDisplay) popup.fileNameDisplay.textContent = displayName;
+            if (displaySize && popup.fileSizeDisplay) popup.fileSizeDisplay.textContent = displaySize;
+
+            popupTimer = setTimeout(() => {
+                closePopup();
+            }, 2500);
+        }
+
+        function cancelDownload() {
+            if (popupController) {
+                try { popupController.abort(); } catch (e) {}
+                popupController = null;
+            }
+            if (popupTimer) { clearTimeout(popupTimer);
+                popupTimer = null; }
+            const popup = {
+                spinner: document.getElementById('popupSpinner'),
+                progressBar: document.getElementById('popupProgressBar'),
+                percentNum: document.getElementById('popupPercentNum'),
+                cancel: document.getElementById('popupCancel'),
+                title: document.getElementById('popupTitle'),
+                sub: document.getElementById('popupSub'),
+                status: document.getElementById('popupStatus'),
+                fileNameDisplay: document.getElementById('popupFileNameDisplay'),
+                fileSizeDisplay: document.getElementById('popupFileSizeDisplay')
+            };
+            const name = popup.fileNameDisplay?.textContent || 'file';
+            finishDownload(false, popup, name);
+            showNotification('Đã hủy tải: ' + name, 'error');
+        }
+
+        // ============================================================
+        // DOWNLOAD MOD
+        // ============================================================
+        function downloadMod() {
+            if (isDownloading) return;
+
+            const fileName = 'GDBOT.geode';
+            const fileSize = '~2.6 MB';
+
+            const popup = createPopup(fileName, fileSize);
+            isDownloading = true;
+            popupController = new AbortController();
+
+            document.querySelectorAll('.download-btn, #downloadModBtn').forEach(btn => {
+                if (btn) btn.disabled = true;
+            });
+
+            startProgressSimulation(popup);
+
+            popupTimer = setTimeout(() => {
+                if (!isDownloading) return;
+                if (popupController.signal.aborted) return;
+
+                if (popup.sub) popup.sub.textContent = 'Đang tải file...';
+
+                fetch(MOD_URL, { signal: popupController.signal })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Không thể tải mod');
+                        const total = parseInt(res.headers.get('content-length')) || 0;
+                        const reader = res.body.getReader();
+
+                        return new ReadableStream({
+                            start(controller) {
+                                let loaded = 0;
+                                let updated = false;
+                                function push() {
+                                    reader.read().then(({ done, value }) => {
+                                        if (done) { controller.close(); return; }
+                                        loaded += value.length;
+                                        if (total > 0 && !updated) {
+                                            const p = (loaded / total) * 100;
+                                            updateProgress(popup, p);
+                                            if (p >= 99) updated = true;
+                                        }
+                                        controller.enqueue(value);
+                                        push();
+                                    }).catch(err => { controller.error(err); });
+                                }
+                                push();
+                            }
+                        });
+                    })
+                    .then(stream => new Response(stream))
+                    .then(response => response.blob())
+                    .then(blob => {
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = 'GDBOT.geode';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+
+                        finishDownload(true, popup, fileName, formatSize(blob.size));
+                        showNotification('Đã tải xong GDBOT Mod!');
+                    })
+                    .catch(err => {
+                        if (err.name === 'AbortError') return;
+                        finishDownload(false, popup, fileName);
+                        showNotification('Lỗi tải mod: ' + err.message, 'error');
+                    });
+            }, 10000);
+        }
+
+        // ============================================================
+        // FILTER & SORT
+        // ============================================================
+        function filterMacros() {
+            const query = dom.searchInput.value.toLowerCase().trim();
+            const items = document.querySelectorAll('.file-item');
+            let visible = 0;
+            items.forEach(item => {
+                const name = item.dataset.name.toLowerCase();
+                if (name.includes(query)) { item.style.display = 'flex';
+                    visible++; } else { item.style.display = 'none'; }
+            });
+            dom.filterBadge.textContent = query ? `🔍 ${visible}` : 'Tất cả';
+        }
+
+        function sortMacros() {
+            const modes = ['name', 'size'];
+            const labels = ['Tên', 'Dung lượng'];
+            let idx = modes.indexOf(sortMode);
+            idx = (idx + 1) % modes.length;
+            sortMode = modes[idx];
+            sortAsc = !sortAsc;
+            dom.sortBadge.textContent = labels[idx] + (sortAsc ? ' ↑' : ' ↓');
+            renderFileList(macroData);
+        }
+
+        // ============================================================
+        // RENDER FILE LIST
+        // ============================================================
+        function renderFileList(files) {
+            const fileList = dom.fileList;
+            const fileCount = dom.fileCount;
+            const totalSizeEl = dom.totalSize;
+
+            if (!files || files.length === 0) {
+                fileList.innerHTML = `
+                    <div class="empty">
+                        <div class="icon">📭</div>
+                        <p>Chưa có macro nào trong kho</p>
+                        <p class="sub">Thêm file .gdr vào thư mục macros/</p>
+                    </div>
+                `;
+                fileCount.textContent = '0';
+                totalSizeEl.textContent = '0 KB';
+                return;
+            }
+
+            const sorted = [...files];
+            if (sortMode === 'name') {
+                sorted.sort((a, b) => sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
+            } else if (sortMode === 'size') {
+                sorted.sort((a, b) => sortAsc ? (a.size || 0) - (b.size || 0) : (b.size || 0) - (a.size || 0));
+            }
+
+            let totalSize = 0;
+            let html = '';
+            for (const file of sorted) {
+                const fileUrl = file.download_url;
+                const displayName = getDisplayName(file.name);
+                const icon = getFileIcon(file.name);
+                const size = file.size || 0;
+                const ext = getExtension(file.name);
+                totalSize += size;
+
+                html += `
+                    <div class="file-item" data-url="${fileUrl}" data-name="${displayName}" data-size="${size}" data-ext="${ext}">
+                        <div class="file-name">
+                            <span class="icon">${icon}</span>
+                            ${displayName}
+                        </div>
+                        <div class="file-meta">
+                            <span class="file-size">${formatSize(size)}</span>
+                            <button class="download-btn" onclick="downloadFileWithPopup(this.parentElement.parentElement)">
+                                ⬇ Tải
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            fileList.innerHTML = html;
+            fileCount.textContent = sorted.length;
+            totalSizeEl.textContent = formatSize(totalSize);
+
+            const query = dom.searchInput.value.toLowerCase().trim();
+            if (query) filterMacros();
+        }
+
+        // ============================================================
+        // DOWNLOAD FILE WITH POPUP
+        // ============================================================
+        function downloadFileWithPopup(fileItem) {
+            if (isDownloading) return;
+
+            const url = fileItem.dataset.url;
+            const name = fileItem.dataset.name;
+            const size = parseInt(fileItem.dataset.size) || 0;
+            const ext = fileItem.dataset.ext || '';
+
+            const fileSize = formatSize(size);
+            const displayName = name + (ext ? '.' + ext : '');
+
+            const btn = fileItem.querySelector('.download-btn');
+            if (btn) btn.disabled = true;
+
+            const popup = createPopup(displayName, fileSize);
+            isDownloading = true;
+            popupController = new AbortController();
+
+            startProgressSimulation(popup);
+
+            popupTimer = setTimeout(() => {
+                if (!isDownloading) return;
+                if (popupController.signal.aborted) return;
+
+                if (popup.sub) popup.sub.textContent = 'Đang tải file...';
+
+                fetch(url, { signal: popupController.signal })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Không thể tải file');
+                        const total = parseInt(res.headers.get('content-length')) || size || 0;
+                        const reader = res.body.getReader();
+
+                        return new ReadableStream({
+                            start(controller) {
+                                let loaded = 0;
+                                let updated = false;
+                                function push() {
+                                    reader.read().then(({ done, value }) => {
+                                        if (done) { controller.close(); return; }
+                                        loaded += value.length;
+                                        if (total > 0 && !updated) {
+                                            const p = (loaded / total) * 100;
+                                            updateProgress(popup, p);
+                                            if (p >= 99) updated = true;
+                                        }
+                                        controller.enqueue(value);
+                                        push();
+                                    }).catch(err => { controller.error(err); });
+                                }
+                                push();
+                            }
+                        });
+                    })
+                    .then(stream => new Response(stream))
+                    .then(response => response.blob())
+                    .then(blob => {
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        const urlParts = url.split('/');
+                        link.download = urlParts[urlParts.length - 1];
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+
+                        finishDownload(true, popup, displayName, formatSize(blob.size));
+                        showNotification('Đã tải xong: ' + name);
+                    })
+                    .catch(err => {
+                        if (err.name === 'AbortError') return;
+                        finishDownload(false, popup, displayName);
+                        showNotification('Lỗi tải file: ' + err.message, 'error');
+                    });
+            }, 10000);
+        }
+
+        // ============================================================
+        // LOAD FILE LIST
+        // ============================================================
+        async function loadFileList() {
+            if (isLoading) return;
+            isLoading = true;
+
+            dom.fileList.innerHTML = `
+                <div style="text-align:center;padding:40px;color:#444;">
+                    <div style="font-size:2rem;margin-bottom:12px;">⏳</div>
+                    <p>Đang tải danh sách macro...</p>
+                </div>
+            `;
+            dom.fileCount.textContent = '...';
+            dom.totalSize.textContent = '...';
+
+            try {
+                const apiUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${MACROS_PATH}?ref=${BRANCH}`;
+                const response = await fetch(apiUrl);
+
+                if (!response.ok) {
+                    if (response.status === 404) throw new Error('Không tìm thấy thư mục macros');
+                    throw new Error(`Lỗi ${response.status}`);
+                }
+
+                const data = await response.json();
+                macroData = data.filter(item => item.type === 'file');
+
+                renderFileList(macroData);
+
+            } catch (error) {
+                dom.fileList.innerHTML = `
+                    <div class="empty">
+                        <div class="icon">❌</div>
+                        <p>Không thể tải danh sách</p>
+                        <p class="sub">${error.message}</p>
+                        <button class="toolbar-btn" onclick="loadFileList()" style="margin-top:16px;background:none;border:1px solid #333;cursor:pointer;padding:8px 20px;border-radius:8px;color:#888;font-family:inherit;">⟳ Thử lại</button>
+                    </div>
+                `;
+                showNotification('Lỗi: ' + error.message, 'error');
+            }
+
+            isLoading = false;
+        }
+
+        // ============================================================
+        // KHỞI CHẠY
+        // ============================================================
+
+        initDomRefs();
+
+        setTimeout(() => {
+            document.getElementById('pageLoader').classList.add('hidden');
+        }, 1500);
+
+        loadFileList();
+
+        dom.searchInput.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') filterMacros();
+        });
+
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin { to { transform: rotate(360deg); } }
+            @keyframes dotPulse { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 1; transform: scale(1.3); } }
+        `;
+        document.head.appendChild(style);
+
+        window.cancelDownload = cancelDownload;
+        window.downloadMod = downloadMod;
+        window.downloadFileWithPopup = downloadFileWithPopup;
+        window.filterMacros = filterMacros;
+        window.sortMacros = sortMacros;
+        window.loadFileList = loadFileList;
+    </script>
+
+</body>
+</html>
